@@ -1,12 +1,14 @@
 from gym import Env
 from gym.spaces import Discrete, Box, Dict, MultiDiscrete, Tuple
-from pieces import Sphinx, Scarab, Pharaoh, Anubis, Pyramid
+from pieces import Sphinx, Scarab, Pharaoh, Anubis, Pyramid, Piece
 import numpy as np
 import json
-   
+from copy import deepcopy
+
 class LaserKhet(Env):
     metadata = {'render.modes': ['human']}
     def __init__(self, verbose = False, manual = False):
+        
         super(LaserKhet, self).__init__()
         self.name = "LaserKhet"
         self.manual = manual
@@ -35,13 +37,9 @@ class LaserKhet(Env):
             "scarab__swap_bottom_left",#check player piece, check bounds, check full, check piece
             "scarab__swap_bottom_right"]#check player piece, check bounds, check full, check piece
         
-        self.action_space = MultiDiscrete(np.ones((self.grid_height,self.grid_width, len(self.action_list)), dtype=np.uint8))
-        # self.action_space = Tuple([Discrete(10), Discrete(8), Discrete(19)])
-        
-        self.observation_space = Dict({ "position": Box(low = 0, high = 1, shape = self.grid_shape, dtype = np.uint8), # 0/1 empty or full
-                                        "orientation": Box(low = 0, high = 3, shape = self.grid_shape, dtype = np.uint8), #0,1,2,3 up right bottom left
-                                        "name": Box(low = 0, high = 4, shape = self.grid_shape, dtype = np.uint8), # Sphinx, Scarab, Pharaoh, Anubis, Pyramid
-                                        "player_piece": Box(low = 0, high = 1, shape = self.grid_shape, dtype = np.uint8)}) #0/1 player ones piece or player 2
+        self.length_action_list = len(self.action_list)
+        self.action_space = Discrete(self.grid_height*self.grid_width*self.length_action_list, start=0)
+        self.observation_space = Box(low=0, high=4, shape=(self.grid_height, self.grid_width, 4), dtype=np.uint8)
         self.n_players = 2
         self.current_player_num = 0
     
@@ -112,6 +110,120 @@ class LaserKhet(Env):
     def step(self):
         pass
     
+    def convert_action_to_coords(self, action):
+       floored_element = np.floor(action / self.length_action_list)
+       floored_row_n = max(0, np.floor(floored_element / self.grid_width))
+       floored_col = floored_element % (self.grid_width)
+       n_action = action - (floored_element*self.length_action_list)
+       return (int(floored_row_n), int(floored_col), int(n_action))
+
+    def is_legal_action(self, action):
+       coords = self.convert_action_to_coords(action=action)
+       available_actions = self.available_actions()
+       if available_actions[coords[0]][coords[1]][coords[2]]:
+          return coords
+       else:
+          return False
+    
+    def rotate(self, coords,  direction = "clockwise"):
+        orientation = self.board["orientation"][coords[0]][coords[1]]
+        orientation = json.loads(self.orientation_map[orientation])
+        piece = Piece(orientation=orientation, name =None, player=None)
+        if direction == "clockwise":
+            piece.rotate_clockwise()
+            orientation = piece.orientation
+        if direction == "counter-clockwise":
+            piece.rotate_counter_clockwise()
+            orientation = piece.orientation
+        self.board["orientation"][coords[0]][coords[1]] = self.orientation_map.index(json.dumps(orientation))
+    
+    def translate(self, coords,  direction):
+       if self.check_translate(coords[0], coords[1], direction):
+          name = self.board["name"][coords[0]][coords[1]]
+          orientation = self.board["orientation"][coords[0]][coords[1]]
+          player_piece = self.board["player_piece"][coords[0]][coords[1]]
+          
+          row, col = self.new_coords(coords[0], coords[1])
+          self.board["position"][row][col] = 1
+          self.board["name"][row][col] = name
+          self.board["orientation"][row][col] = orientation
+          self.board["player_piece"][row][col] = player_piece
+          
+          self.board["position"][coords[0]][coords[1]] = 0
+          self.board["name"][coords[0]][coords[1]] = 0
+          self.board["orientation"][coords[0]][coords[1]] = 0
+          self.board["player_piece"][coords[0]][coords[1]] = 0
+          return 1
+       else:
+          return 0
+       
+    def scarab_swap(self, coords, direction):
+       if self.check_scarab_swap(coords[0], coords[1], direction):
+          row, col = self.new_coords(coords[0], coords[1])
+          
+          name = self.board["name"][row][col]
+          orientation = self.board["orientation"][row][col]
+          player_piece = self.board["player_piece"][row][col]
+          
+          self.board["name"][row][col] = self.board["name"][coords[0]][coords[1]]
+          self.board["orientation"][row][col] = self.board["orientation"][coords[0]][coords[1]]
+          self.board["player_piece"][row][col] = self.board["player_piece"][coords[0]][coords[1]]
+          
+          self.board["name"][coords[0]][coords[1]] = name
+          self.board["orientation"][coords[0]][coords[1]] = orientation
+          self.board["player_piece"][coords[0]][coords[1]] = player_piece
+          return 1
+       else:
+          return 0
+    
+    def skip(self, coords):
+       self.board = self.board
+       return 1
+       
+    def perform_action(self, action):
+       coords = self.is_legal_action(action)
+       if coords:
+          temp_board = deepcopy(self.board)
+          if self.action_list[coords[2]] == "skip":
+             pass
+          elif self.action_list[coords[2]] == "rotate_clockwise":
+             pass
+          elif self.action_list[coords[2]] == "rotate_counter_clockwise":
+             pass
+          elif self.action_list[coords[2]] == "up":
+             pass
+          elif self.action_list[coords[2]] == "down":
+             pass
+          elif self.action_list[coords[2]] == "left":
+             pass
+          elif self.action_list[coords[2]] == "right":
+             pass
+          elif self.action_list[coords[2]] == "top_left":
+             pass
+          elif self.action_list[coords[2]] == "top_right":
+             pass
+          elif self.action_list[coords[2]] == "bottom_left":
+             pass
+          elif self.action_list[coords[2]] == "bottom_right":
+             pass
+          elif self.action_list[coords[2]] == "scarab_swap_up":
+             pass
+          elif self.action_list[coords[2]] == "scarab_swap_down":
+             pass
+          elif self.action_list[coords[2]] == "scarab_swap_left":
+             pass
+          elif self.action_list[coords[2]] == "scarab_swap_right":
+             pass
+          elif self.action_list[coords[2]] == "scarab_swap_top_left":
+             pass
+          elif self.action_list[coords[2]] == "scarab_swap_top_right":
+             pass
+          elif self.action_list[coords[2]] == "scarab_swap_bottom_left":
+             pass
+          elif self.action_list[coords[2]] == "scarab_swap_bottom_right":
+             pass
+          
+       
     def available_actions(self):
         available_actions = np.array([])
         for row in range(len(self.board["position"])):
@@ -150,11 +262,12 @@ class LaserKhet(Env):
                 
     def set_board(self, name, row, col, player, orientation = [0,1]):
         self.name_map = {"Sphinx": 0, "Scarab":1, "Pharaoh":2, "Anubis":3, "Pyramid":4}
-        self.orientation_map = {"[0, 1]":0, "[1, 0]":1, "[0, -1]":2, "[-1, 0]":3}
+        self.orientation_map = ["[0, 1]", "[1, 0]", "[0, -1]", "[-1, 0]"]
         self.board["position"][row][col] = 1
         self.board["name"][row][col] = self.name_map[name]
-        self.board["orientation"][row][col] = self.orientation_map[json.dumps(orientation)]
+        self.board["orientation"][row][col] = self.orientation_map.index(json.dumps(orientation))
         self.board["player_piece"][row][col] = player
+        
         
     def reset(self):
         self.board = {"position": np.zeros(shape = self.grid_shape, dtype = np.uint8),
@@ -168,13 +281,13 @@ class LaserKhet(Env):
         
         
         # self.board[0][0] = Sphinx(player  = 1)
-        self.set_board("Sphinx", 0, 0, 1)
+        self.set_board("Sphinx", 0, 0, 1, orientation=[0,-1])
         # self.board[0][4] = Anubis(player  = 1)
-        self.set_board("Anubis", 0, 4, 1)
+        self.set_board("Anubis", 0, 4, 1, orientation=[0,-1])
         # self.board[0][5] = Pharaoh(player = 1)
-        self.set_board("Pharaoh", 0, 5, 1)
+        self.set_board("Pharaoh", 0, 5, 1, orientation=[0,-1])
         # self.board[0][6] = Anubis(player  = 1)
-        self.set_board("Anubis", 0, 6, 1)
+        self.set_board("Anubis", 0, 6, 1, orientation=[0,-1])
         # self.board[0][7] = Pyramid(player = 1, orientation = [0,-1])
         self.set_board("Pyramid", 0, 7, 1, orientation=[0,-1])
 
@@ -223,19 +336,21 @@ class LaserKhet(Env):
 
         # #row 8 (bottom)
         # self.board[7][9] = Sphinx(player=0)
-        self.set_board("Sphinx", 7, 9, 0) 
+        self.set_board("Sphinx", 7, 9, 0, orientation=[0,1]) 
         # self.board[7][5] = Anubis(player=0)
-        self.set_board("Anubis", 7, 5, 0) 
+        self.set_board("Anubis", 7, 5, 0, orientation=[0,1]) 
         # self.board[7][4] = Pharaoh(player=0)
-        self.set_board("Pharaoh", 7, 4, 0) 
+        self.set_board("Pharaoh", 7, 4, 0, orientation=[0,1]) 
         # self.board[7][3] = Anubis(player=0)
-        self.set_board("Anubis", 7, 3, 0) 
+        self.set_board("Anubis", 7, 3, 0,  orientation=[0,1]) 
         # self.board[7][2] = Pyramid(player=0, orientation=[0,1])
-        self.set_board("Pyramid", 7, 2, 0, orientation=[0,1]) 
+        self.set_board("Pyramid", 7, 2, 0, orientation=[0,1])
+        self.boardstate = np.dstack([self.board["position"], self.board["name"],self.board["orientation"], self.board["player_piece"]]) 
 
 
 board = LaserKhet()
-
 board.reset()
-print(board.action_space.sample())
-vec = board.available_actions()
+board.list2.append(5)
+print(board.list1)
+
+

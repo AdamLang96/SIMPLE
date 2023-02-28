@@ -2,8 +2,8 @@ import numpy as np
 
 class Piece():
     def __init__(self, name, player, orientation = None):
-        if name not in np.array(["Pyramid", "Sphinx", "Scarab", "Anubis", "Pharaoh"]):
-            raise ValueError(f'name must be one of np.array(["Pyramid", "Sphinx", "Scarab", "Anubis", "Pharaoh"])).all(). Received {name}')
+        # if name not in np.array(["Pyramid", "Sphinx", "Scarab", "Anubis", "Pharaoh"]):
+        #     raise ValueError(f'name must be one of np.array(["Pyramid", "Sphinx", "Scarab", "Anubis", "Pharaoh"])).all(). Received {name}')
         self.name = name
         self.player = player
         if not orientation:
