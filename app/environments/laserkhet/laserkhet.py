@@ -152,7 +152,7 @@ class LaserKhet(Env):
         if direction == "counter-clockwise":
             piece.rotate_counter_clockwise()
             orientation = piece.orientation
-        self.board["orientation"][coords[0]][coords[1]] = self.orientation_map.index(json.dumps(orientation))
+        self.board["orientation"][coords[0]][coords[1]] = self.orientation_map.index(json.dumps(orientation.tolist()))
         return True
     
     def translate(self, coords,  direction):
@@ -202,6 +202,7 @@ class LaserKhet(Env):
         completed_action = False
         if coords:
             if self.action_list[coords[2]] == "skip":
+                self.reward_counter["skip"] += 1
                 completed_action = self.skip()
             elif self.action_list[coords[2]] == "rotate_clockwise":
                 completed_action = self.rotate(coords, "clockwise")
@@ -239,7 +240,7 @@ class LaserKhet(Env):
                 completed_action = self.translate(coords, "bottom_left")
             elif self.action_list[coords[2]] == "scarab_swap_bottom_right":
                 completed_action = self.translate(coords, "bottom_right")
-                
+ 
             if completed_action:
                 return True
             else:
@@ -248,9 +249,11 @@ class LaserKhet(Env):
     def press_laser(self):
         keep_moving_laser = True
         pos = self.sphinx_map[self.current_player_num]
+        print(f"current player {self.current_player_num}")
+        print(f"sphinx map: {self.sphinx_map}")
+        print(f"starting position: {pos}")
         laser_orientation = self.board["orientation"][pos[0], pos[1]]
         laser_orientation = np.array(json.loads(self.orientation_map[laser_orientation]))
-        print(f"starting position: {pos}")
         while keep_moving_laser:
             if (laser_orientation == [0,1]).all():
                 pos[0] -= 1
@@ -272,9 +275,11 @@ class LaserKhet(Env):
             if piece:
                 piece = self.player_logic(name, player, np.array(json.loads(self.orientation_map[orientation])))
                 laser_orientation = piece.laser_deflection(laser_orientation)
-                if not  isinstance(laser_orientation, np.ndarray):
+                if not isinstance(laser_orientation, np.ndarray):
                     keep_moving_laser = False
                     if laser_orientation == 'hit':
+                        if piece.player != self.current_player_num:
+                            self.reward_counter["opponent_piece_taken"] += 1
                         if piece.name == "Pharaoh" and piece.player == 0:
                             print("Game Over. Player 2 Wins")
                             return "P2W"
@@ -293,12 +298,13 @@ class LaserKhet(Env):
                     if laser_orientation == 'hit unharmed':
                         print("hit unharmed")
                         return "hit unharmed"
-                    
-                    
-    
+                else:
+                    self.reward_counter["mirrors_used"] += 1
+        
     def execute_turn(self, action):
         completed_action = self.perform_action(action)
         if not completed_action:
+           self.reward_counter["illegal_action"] += 1
            return "Invalid Action"
         else:
             turn = self.press_laser()
@@ -313,14 +319,11 @@ class LaserKhet(Env):
             done = True
         if turn == 'P1W':
             done = True
-        if turn == "OOB":
-            pass
-        if turn == 'hit':
-            pass
-        if turn == "hit unharmed":
-            pass
+        # add reward here
         self.current_player_num += 1
         self.current_player_num = self.current_player_num % 2
+        self.reward_counter = {"mirrors_used":0, "opponent_piece_taken":0, "skips":0, "illegal_action":0}
+        self.sphinx_map = [np.array([7,9]), np.array([0,0])]
         return self.boardstate, turn, done, reward
             
     def available_actions(self):
@@ -369,6 +372,7 @@ class LaserKhet(Env):
                       "orientation": np.zeros( shape = self.grid_shape, dtype = np.uint8),
                       "name": np.zeros( shape = self.grid_shape, dtype = np.uint8),
                       "player_piece": np.zeros( shape = self.grid_shape, dtype = np.uint8)}
+        
         self.sphinx_map = [np.array([7,9]), np.array([0,0])]
         self.num_pieces_p1 = 13
         self.num_pieces_p2 = 13
@@ -414,7 +418,8 @@ class LaserKhet(Env):
         self.set_board("Anubis", 7, 3, 0,  orientation=[0,1]) 
         self.set_board("Pyramid", 7, 2, 0, orientation=[0,1])
         self.boardstate = np.dstack([self.board["position"], self.board["name"],self.board["orientation"], self.board["player_piece"]]) 
-
+        self.reward_counter = {"mirrors_used":0, "opponent_piece_taken":0, "skips":0, "illegal_action":0}
+        self.turns = 0
 
 board = LaserKhet()
 board.reset()

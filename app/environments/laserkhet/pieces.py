@@ -80,7 +80,7 @@ class Anubis(Piece):
     def __init__(self, *args, **kwargs):
         super(Anubis, self).__init__(*args, **kwargs, name="Anubis")
     def laser_deflection(self, laser_direction):
-        if laser_direction == self.orientation * -1:
+        if (np.array(laser_direction) == np.array(self.orientation) * -1).all():
             return 'hit unharmed'
         else:
             return 'hit'
