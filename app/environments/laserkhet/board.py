@@ -3,7 +3,7 @@ import numpy as np
 class Board():
     def __init__(self):
         self.curr_player = "1"
-        
+    
     def check_move_validity(self, coords):
         if self.board[coords[0]][coords[1]] == 0:
             raise ValueError("There must be a piece at this location on the board")

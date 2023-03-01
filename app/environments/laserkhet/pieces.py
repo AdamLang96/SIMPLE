@@ -1,20 +1,12 @@
 import numpy as np
 
 class Piece():
-    def __init__(self, name, player, orientation = None):
+    def __init__(self, name, player, orientation):
         # if name not in np.array(["Pyramid", "Sphinx", "Scarab", "Anubis", "Pharaoh"]):
         #     raise ValueError(f'name must be one of np.array(["Pyramid", "Sphinx", "Scarab", "Anubis", "Pharaoh"])).all(). Received {name}')
         self.name = name
         self.player = player
-        if not orientation:
-            if self.player == '1':
-                self.orientation = np.array([0,1])
-            elif self.player == '2':
-                self.orientation =  np.array([0,-1])
-            else:
-                raise ValueError("argument 'Player' must be '1' or '2'")
-        else:
-            self.orientation = orientation
+        self.orientation = orientation
 
     def rotate_clockwise(self):
         if (self.orientation == np.array([0,1])).all():
@@ -98,3 +90,4 @@ class Pharaoh(Piece):
         super(Pharaoh, self).__init__(*args, **kwargs, name="Pharaoh")
     def laser_deflection(self, laser_direction):
         return 'hit'
+
