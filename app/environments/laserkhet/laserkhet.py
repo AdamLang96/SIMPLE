@@ -55,7 +55,6 @@ class LaserKhet(Env):
             piece = Pyramid(player=player, orientation=orientation)
         return piece
         
-    
     def check_bounds(self, row, col):
       if row < 0 or row > self.grid_height - 1 or col < 0 or col > self.grid_width - 1:
        return False
@@ -126,7 +125,6 @@ class LaserKhet(Env):
                                      self.board["orientation"], 
                                      self.board["player_piece"]])
 
-    
     def convert_action_to_coords(self, action):
        floored_element = np.floor(action / self.length_action_list)
        floored_row_n = max(0, np.floor(floored_element / self.grid_width))
@@ -202,7 +200,7 @@ class LaserKhet(Env):
         completed_action = False
         if coords:
             if self.action_list[coords[2]] == "skip":
-                self.reward_counter["skip"] += 1
+                self.reward_counter["skips"] += 1
                 completed_action = self.skip()
             elif self.action_list[coords[2]] == "rotate_clockwise":
                 completed_action = self.rotate(coords, "clockwise")
@@ -247,22 +245,25 @@ class LaserKhet(Env):
                 return False
     
     def press_laser(self):
+        self.laser_tracker = []
+        
         keep_moving_laser = True
         pos = self.sphinx_map[self.current_player_num]
-        print(f"current player {self.current_player_num}")
-        print(f"sphinx map: {self.sphinx_map}")
-        print(f"starting position: {pos}")
         laser_orientation = self.board["orientation"][pos[0], pos[1]]
         laser_orientation = np.array(json.loads(self.orientation_map[laser_orientation]))
         while keep_moving_laser:
             if (laser_orientation == [0,1]).all():
                 pos[0] -= 1
+                laser = [pos[0], pos[1], 0]
             elif (laser_orientation == [0,-1]).all():
                 pos[0] += 1
+                laser = [pos[0], pos[1], 2]
             elif (laser_orientation == [1,0]).all():
                 pos[1] += 1
+                laser = [pos[0], pos[1], 1]
             else :
                 pos[1] -= 1
+                laser = [pos[0], pos[1], 3]
             print(f"row: {pos[0]} col: {pos[1]}")
             if not self.check_bounds(pos[0], pos[1]):
                 print("out of bounds")
@@ -300,6 +301,8 @@ class LaserKhet(Env):
                         return "hit unharmed"
                 else:
                     self.reward_counter["mirrors_used"] += 1
+            else:
+                self.laser_tracker.append(laser)
         
     def execute_turn(self, action):
         completed_action = self.perform_action(action)
@@ -320,6 +323,8 @@ class LaserKhet(Env):
         if turn == 'P1W':
             done = True
         # add reward here
+        print(f"current player {self.current_player_num}")
+        print(f"reward counter {self.reward_counter}")
         self.current_player_num += 1
         self.current_player_num = self.current_player_num % 2
         self.reward_counter = {"mirrors_used":0, "opponent_piece_taken":0, "skips":0, "illegal_action":0}
@@ -368,6 +373,7 @@ class LaserKhet(Env):
         
         
     def reset(self):
+        self.laser_tracker = []
         self.board = {"position": np.zeros(shape = self.grid_shape, dtype = np.uint8),
                       "orientation": np.zeros( shape = self.grid_shape, dtype = np.uint8),
                       "name": np.zeros( shape = self.grid_shape, dtype = np.uint8),
