@@ -4,13 +4,13 @@ from pieces import Sphinx, Scarab, Pharaoh, Anubis, Pyramid, Piece
 import numpy as np
 import json
 from PIL import Image
-class LaserKhet(Env):
+class LaserKhetEnv(Env):
     metadata = {'render.modes': ['human']}
     def __init__(self, verbose = False, manual = False, assets_path = "/Users/adamgabriellang/Desktop/laserkhetassets", reward_weights = {'mirrors_used':.1, 
                                                                                                                                           'opponent_piece_taken':.25,
                                                                                                                                           'skips':-.1,
                                                                                                                                           'won':1}): 
-        super(LaserKhet, self).__init__()
+        super(LaserKhetEnv, self).__init__()
         self.name = "LaserKhet"
         self.manual = manual
         self.grid_width = 10
@@ -340,19 +340,17 @@ class LaserKhet(Env):
         w = self.reward_weights        
         done = False
         turn = self.execute_turn(action)
-        if turn == 'P2W': 
-            done = True
-        if turn == 'P1W':
+        if turn == 'P2W' or turn == 'P1W': 
             done = True
         # add reward here
-        if self.current_player_num==1:
-            self.current_player_num=2
-        else:
-            self.current_player_num=1
         self.sphinx_map = [np.array([7,9]), np.array([0,0])]
         r = count['mirrors_used'] * w['mirrors_used'] + count["opponent_piece_taken"] * w["opponent_piece_taken"] 
         r = r + count['skips'] * w['skips'] + count["won"] * w["won"] 
         reward[self.current_player_num - 1] = r
+        if self.current_player_num==1:
+            self.current_player_num=2
+        else:
+            self.current_player_num=1
         return self.boardstate, turn, done, reward
             
     def legal_actions(self):

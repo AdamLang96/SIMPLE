@@ -1,5 +1,3 @@
-
-
 def get_environment(env_name):
     try:
         if env_name in ('tictactoe'):
@@ -20,6 +18,11 @@ def get_environment(env_name):
         elif env_name in ('frouge'):
             from frouge.envs.frouge import FlammeRougeEnv
             return FlammeRougeEnv
+        elif env_name in ('laserkhet'):
+            print('hit')
+            from laserkhet.envs.laserkhet import LaserKhetEnv
+            print(LaserKhetEnv)
+            return LaserKhetEnv
         else:
             raise Exception(f'No environment found for {env_name}')
     except SyntaxError as e:
@@ -49,6 +52,8 @@ def get_network_arch(env_name):
     elif env_name in ('frouge'):
         from models.frouge.models import CustomPolicy
         return CustomPolicy
+    elif env_name in ('laserkhet'):
+        from models.laserkhet.models import CustomPolicy
+        return CustomPolicy
     else:
         raise Exception(f'No model architectures found for {env_name}')
-
