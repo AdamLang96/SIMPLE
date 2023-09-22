@@ -1,17 +1,109 @@
 from gym import Env
 from gym.spaces import Discrete, Box
-from pieces import Sphinx, Scarab, Pharaoh, Anubis, Pyramid, Piece
 import numpy as np
 import json
 from PIL import Image
+
+class Piece():
+    def __init__(self, name, player, orientation):
+        # if name not in np.array(["Pyramid", "Sphinx", "Scarab", "Anubis", "Pharaoh"]):
+        #     raise ValueError(f'name must be one of np.array(["Pyramid", "Sphinx", "Scarab", "Anubis", "Pharaoh"])).all(). Received {name}')
+        self.name = name
+        self.player = player
+        self.orientation = orientation
+
+    def rotate_clockwise(self):
+        if (self.orientation == np.array([0,1])).all():
+           self.orientation = np.array([1,0])
+        elif (self.orientation == np.array([1,0])).all():
+           self.orientation = np.array([0,-1])
+        elif (self.orientation == np.array([0,-1])).all():
+           self.orientation = np.array([-1,0])
+        else:
+           self.orientation = np.array([0,1])
+       
+    def rotate_counter_clockwise(self):
+        if (self.orientation == np.array([0,1])).all():
+           self.orientation = np.array([-1,0])
+        elif (self.orientation == np.array([-1,0])).all():
+           self.orientation = np.array([0,-1])  
+        elif (self.orientation == np.array([0,-1])).all():
+           self.orientation = np.array([1,0])
+        else:
+           self.orientation = np.array([0,1])
+
+class Pyramid(Piece):
+    #for the pyramid and scarab we will consider pyramid pointing to top left as np.array([0,1])).all()
+    def __init__(self, *args, **kwargs):
+        super(Pyramid, self).__init__(*args, **kwargs, name="Pyramid")
+    
+    def laser_deflection(self, laser_direction):
+        if (self.orientation == np.array([0,1])).all():
+            if (laser_direction == np.array([0,-1])).all() or (laser_direction == np.array([1,0])).all():
+                return laser_direction[::-1] 
+            else:
+                return 'hit'
+        
+        if (self.orientation == np.array([1,0])).all():
+            if (laser_direction == np.array([0,-1])).all() or (laser_direction == np.array([-1,0])).all():
+                return  laser_direction[::-1] * -1
+            else:
+                return 'hit'
+
+        if (self.orientation == np.array([0,-1])).all():
+            if (laser_direction == np.array([0,1])).all() or (laser_direction ==np.array([-1,0])).all():
+                return  laser_direction[::-1]
+            else:
+                return 'hit'
+        
+        if (self.orientation == np.array([-1,0])).all():
+            if (laser_direction == np.array([0,1])).all() or (laser_direction == np.array([1,0])).all():
+                return  laser_direction[::-1] * -1
+            else:
+                return 'hit'
+
+class Sphinx(Piece):
+    def __init__(self, *args, **kwargs):
+        super(Sphinx, self).__init__(*args, **kwargs, name="Sphinx")
+        
+    def laser_deflection(self, laser_direction):
+        return 'hit unharmed'
+    
+class Scarab(Piece):
+    def __init__(self, *args, **kwargs):
+        super(Scarab, self).__init__(*args, **kwargs, name="Scarab")
+    
+    def laser_deflection(self, laser_direction):
+        if (self.orientation == np.array([0,1])).all() or (self.orientation == np.array([0,-1])).all():
+            return laser_direction[::-1]
+        
+        if (self.orientation == np.array([1,0])).all() or (self.orientation == np.array([-1,0])).all():
+                   return laser_direction[::-1] * -1
+
+class Anubis(Piece):
+    def __init__(self, *args, **kwargs):
+        super(Anubis, self).__init__(*args, **kwargs, name="Anubis")
+    def laser_deflection(self, laser_direction):
+        if (np.array(laser_direction) == np.array(self.orientation) * -1).all():
+            return 'hit unharmed'
+        else:
+            return 'hit'
+
+class Pharaoh(Piece):
+    def __init__(self, *args, **kwargs):
+        super(Pharaoh, self).__init__(*args, **kwargs, name="Pharaoh")
+    def laser_deflection(self, laser_direction):
+        return 'hit'
+
+
 class LaserKhetEnv(Env):
     metadata = {'render.modes': ['human']}
-    def __init__(self, verbose = False, manual = False, assets_path = "/Users/adamgabriellang/Desktop/laserkhetassets", reward_weights = {'mirrors_used':.1, 
+    def __init__(self, verbose = False, manual = False, assets_path = "laserkhetassets", reward_weights = {'mirrors_used':.1, 
                                                                                                                                           'opponent_piece_taken':.25,
                                                                                                                                           'skips':-.1,
                                                                                                                                           'won':1}): 
         super(LaserKhetEnv, self).__init__()
-        self.name = "LaserKhet"
+        self.name = "laserkhet"
         self.manual = manual
         self.grid_width = 10
         self.grid_height = 8
@@ -39,12 +131,13 @@ class LaserKhetEnv(Env):
             "scarab__swap_bottom_right"]
         
         self.length_action_list = len(self.action_list)
-        self.action_space = Discrete(self.grid_height*self.grid_width*self.length_action_list, start=0)
+        self.action_space = Discrete(self.grid_height*self.grid_width*self.length_action_list)
         self.observation_space = Box(low=0, high=4, shape=(self.grid_height, self.grid_width, 4), dtype=np.uint8)
         self.current_player_num = 1
         self.assets_path = assets_path
         self.sphinx_map = [np.array([7,9]), np.array([0,0])]
         self.reward_weights = reward_weights
+        self.n_players=2
         
     def player_logic(self, name, player, orientation):
         if name == 1:
@@ -158,7 +251,7 @@ class LaserKhetEnv(Env):
                                      self.board["name"],
                                      self.board["orientation"], 
                                      self.board["player_piece"]])
-    
+    @property
     def observation(self):
         player_mask = np.array(self.board['player_piece'], dtype=np.float64)
         if self.current_player_num == 1:
@@ -351,7 +444,7 @@ class LaserKhetEnv(Env):
             self.current_player_num=2
         else:
             self.current_player_num=1
-        return self.boardstate, turn, done, reward
+        return self.observation, turn, done, reward
             
     def legal_actions(self):
         mask = []
@@ -426,6 +519,7 @@ class LaserKhetEnv(Env):
         self.boardstate = np.dstack([self.board["position"], self.board["name"],self.board["orientation"], self.board["player_piece"]]) 
         self.reward_counter = {"mirrors_used":0, "opponent_piece_taken":0, "skips":0, 'won': 0}
         self.turns = 0
+        return self.observation
 
 
 

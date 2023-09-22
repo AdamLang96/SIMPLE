@@ -21,7 +21,6 @@ def get_environment(env_name):
         elif env_name in ('laserkhet'):
             print('hit')
             from laserkhet.envs.laserkhet import LaserKhetEnv
-            print(LaserKhetEnv)
             return LaserKhetEnv
         else:
             raise Exception(f'No environment found for {env_name}')

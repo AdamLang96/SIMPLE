@@ -1,4 +1,4 @@
-FROM ubuntu:bionic-20200219 as base
+FROM python:3.7.7-slim-buster as base
 
 RUN apt-get update
 RUN apt-get -y install ssh
@@ -11,6 +11,7 @@ RUN apt-get -y install cmake libopenmpi-dev python3-dev zlib1g-dev libgl1-mesa-d
 
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools
+RUN apt-get -y install vim
 
 RUN useradd -ms /bin/bash selfplay
 USER selfplay

@@ -1,8 +1,8 @@
-from envs.laserkhet import LaserKhet
+from envs.laserkhet import LaserKhetEnv
 import numpy as np
 from random import sample
 import time
-lk = LaserKhet()
+lk = LaserKhetEnv()
 lk.reset()
 play_game = True
 i=0
